@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  rails-api:
+    build:
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    container_name: rails-dev
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/backend
+      - gem_cache:/usr/local/bundle/gems
+    environment:
+      - REDIS_URL=redis://redis-db:6379
+      - OPENSEARCH_URL=http://opensearch-node1:9200
+    depends_on:
+      opensearch-node1:
+        condition: service_started
+      redis-db:
+        condition: service_started
+    networks:
+      - opensearch-net
+
+  # Cache
+  redis-db:
+    image: redis:7.0.7
+    container_name: redis-db
+    restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL,CONFIG
+    ports:
+      - 6379:6379
+
+  # Full text search
+  opensearch-node1:
+    image: opensearchproject/opensearch:2.4.1
+    container_name: opensearch-node1
+    restart: unless-stopped
+    environment:
+      - node.name=opensearch-node1
+      - discovery.type=single-node
+      - discovery.seed_hosts=opensearch-node1
+      # Along with the memlock settings below, disables swapping
+      - bootstrap.memory_lock=true
+      # Minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      # Disables security plugin & SSL / HTTPS
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        # Maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch-data1:/usr/share/opensearch/data
+    ports:
+      - 9200:9200
+      # Required for Performance Analyzer
+      - 9600:9600
+    expose:
+      - 9200
+    networks:
+      - opensearch-net
+
+  # Full text search dashboard
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.4.1
+    container_name: opensearch-dashboards
+    restart: unless-stopped
+    ports:
+      - 5601:5601
+    expose:
+      - 5601
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://opensearch-node1:9200"]'
+      # Disables security dashboards plugin in OpenSearch Dashboards
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    depends_on:
+      - opensearch-node1
+    networks:
+      - opensearch-net
+
+volumes:
+  gem_cache:
+  opensearch-data1:
+
+networks:
+  opensearch-net:

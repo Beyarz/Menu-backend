@@ -1,0 +1,7 @@
+require:
+  - rubocop-rails
+  - rubocop-performance
+
+inherit_gem:
+  rubocop-rails_config:
+    - config/rails.yml

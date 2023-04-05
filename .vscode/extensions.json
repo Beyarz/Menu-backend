@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "mame.ruby-typeprof",
+    "misogi.ruby-rubocop",
+    "castwide.solargraph",
+    "wingrunr21.vscode-ruby",
+    "rebornix.ruby",
+    "kaiwood.endwise"
+  ]
+}

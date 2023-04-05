@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+FROM ruby:3.1.2
+
+WORKDIR /backend
+
+COPY Gemfile Gemfile.lock ./
+
+COPY . ./
+
+ENV BUNDLER_VERSION=2.3.21
+
+ENV RAILS_ENV=development
+
+# Ensure binding is always 0.0.0.0, even in development, to access server from outside container
+ENV BINDING="0.0.0.0"
+
+# Ensure node.js 19 is available for apt-get
+# RUN curl -sL https://deb.nodesource.com/setup_19.x | bash -
+
+# Install dependencies
+# RUN apt-get update -qq && apt-get install -y build-essential libvips nodejs && npm install -g yarn
+
+# Excluded node & yarn
+RUN apt-get update -qq && apt-get install -y build-essential libvips
+
+RUN gem install bundler -v 2.3.21
+
+# Defaults to bundle install which install all the dependencies
+RUN bundle
+
+ENTRYPOINT ["bin/docker-entrypoint.sh"]
